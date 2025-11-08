@@ -1,0 +1,1 @@
+const mongoose=require('mongoose'); const url=process.env.MONGODB_URI||'mongodb://127.0.0.1:27017/event-management'; mongoose.connect(url,{useNewUrlParser:true,useUnifiedTopology:true}).then(()=>{console.log('OK'); process.exit(0)}).catch(e=>{console.error(e); process.exit(1)});
