@@ -266,3 +266,5 @@ For support and questions, please contact the development team or create an issu
 
 **Built with ❤️ for efficient event management**
 
+BY ABISHEK K G
+
