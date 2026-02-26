@@ -28,10 +28,16 @@ const userSchema = new mongoose.Schema({
     minlength: [6, 'Password must be at least 6 characters'],
     select: false
   },
+  organizationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Organization',
+    required: true,
+    index: true
+  },
   role: {
     type: String,
-    enum: ['admin', 'manager', 'staff', 'client'],
-    default: 'staff'
+    enum: ['Super Admin', 'Admin', 'Organizer', 'Vendor', 'Client', 'Attendee'],
+    default: 'Attendee'
   },
   phone: {
     type: String,
@@ -75,10 +81,9 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Hash password before saving
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-  
+
   try {
     const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(this.password, salt);
@@ -88,15 +93,15 @@ userSchema.pre('save', async function(next) {
   }
 });
 
-// Compare password method
-userSchema.methods.comparePassword = async function(candidatePassword) {
+userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Get full name
-userSchema.virtual('fullName').get(function() {
+userSchema.virtual('fullName').get(function () {
   return `${this.firstName} ${this.lastName}`;
 });
+
+userSchema.index({ organizationId: 1, email: 1 });
 
 module.exports = mongoose.model('User', userSchema);
 

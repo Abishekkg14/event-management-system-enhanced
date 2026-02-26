@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const eventSchema = new mongoose.Schema({
+  organizationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Organization',
+    required: true,
+    index: true
+  },
   title: {
     type: String,
     required: [true, 'Event title is required'],
@@ -40,7 +46,9 @@ const eventSchema = new mongoose.Schema({
     },
     coordinates: {
       latitude: Number,
-      longitude: Number
+      longitude: Number,
+      lat: Number,
+      lng: Number
     }
   },
   capacity: {
@@ -131,17 +139,15 @@ const eventSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Virtual for available spots
-eventSchema.virtual('availableSpots').get(function() {
+eventSchema.virtual('availableSpots').get(function () {
   return this.capacity - this.currentRegistrations;
 });
 
-// Virtual for registration percentage
-eventSchema.virtual('registrationPercentage').get(function() {
+eventSchema.virtual('registrationPercentage').get(function () {
   return Math.round((this.currentRegistrations / this.capacity) * 100);
 });
 
-// Index for better query performance
+eventSchema.index({ organizationId: 1, startDate: 1, status: 1 });
 eventSchema.index({ startDate: 1, status: 1 });
 eventSchema.index({ organizer: 1 });
 eventSchema.index({ client: 1 });

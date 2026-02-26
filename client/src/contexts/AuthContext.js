@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// Create context
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -9,18 +8,16 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Check for existing user on component mount
   useEffect(() => {
     const checkAuthUser = () => {
       const user = JSON.parse(localStorage.getItem('authUser')) || JSON.parse(sessionStorage.getItem('authUser'));
       setCurrentUser(user);
       setLoading(false);
     };
-    
+
     checkAuthUser();
   }, []);
 
-  // Login function
   const login = (userData, rememberMe = false) => {
     const storage = rememberMe ? localStorage : sessionStorage;
     storage.setItem('authUser', JSON.stringify(userData));
@@ -28,7 +25,6 @@ export function AuthProvider({ children }) {
     navigate('/dashboard');
   };
 
-  // Logout function
   const logout = () => {
     localStorage.removeItem('authUser');
     sessionStorage.removeItem('authUser');
@@ -36,7 +32,6 @@ export function AuthProvider({ children }) {
     navigate('/login');
   };
 
-  // Value object to be provided to consumers
   const value = {
     currentUser,
     loading,
@@ -52,7 +47,6 @@ export function AuthProvider({ children }) {
   );
 }
 
-// Custom hook for using the auth context
 export function useAuth() {
   return useContext(AuthContext);
 }

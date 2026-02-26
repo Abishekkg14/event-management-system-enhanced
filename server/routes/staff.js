@@ -1,14 +1,12 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
+const Organization = require('../models/Organization');
 const { auth, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
-// @route   GET /api/staff
-// @desc    Get all staff members
-// @access  Private (Admin, Manager)
-router.get('/', [auth, authorize('admin', 'manager')], async (req, res) => {
+router.get('/', [auth, authorize('Super Admin', 'Admin', 'Organizer')], async (req, res) => {
   try {
     const {
       page = 1,
@@ -20,6 +18,9 @@ router.get('/', [auth, authorize('admin', 'manager')], async (req, res) => {
     } = req.query;
 
     const filter = { isActive: true };
+    if (req.user.role !== 'Super Admin') {
+      filter.organizationId = req.user.organizationId;
+    }
     if (role) filter.role = role;
     if (search) {
       filter.$or = [
@@ -52,15 +53,12 @@ router.get('/', [auth, authorize('admin', 'manager')], async (req, res) => {
   }
 });
 
-// @route   POST /api/staff
-// @desc    Create new staff member
-// @access  Private (Admin)
-router.post('/', [auth, authorize('admin')], [
+router.post('/', [auth, authorize('Super Admin', 'Admin')], [
   body('firstName').trim().notEmpty().withMessage('First name is required'),
   body('lastName').trim().notEmpty().withMessage('Last name is required'),
   body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('role').isIn(['admin', 'manager', 'staff']).withMessage('Invalid role')
+  body('role').isIn(['Admin', 'Organizer', 'Vendor', 'Client', 'Attendee']).withMessage('Invalid role')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -75,15 +73,20 @@ router.post('/', [auth, authorize('admin')], [
       return res.status(400).json({ message: 'User already exists with this email' });
     }
 
-    const user = new User({
-      firstName,
-      lastName,
-      email,
-      password,
-      role,
-      phone
-    });
+    const newUserData = { firstName, lastName, email, password, role, phone };
+    if (req.body.organizationId) {
+      newUserData.organizationId = req.body.organizationId;
+    } else if (req.user.organizationId) {
+      newUserData.organizationId = req.user.organizationId;
+    } else {
+      const defaultOrg = await Organization.findOne({ status: 'active' }).sort({ createdAt: 1 });
+      if (!defaultOrg) {
+        return res.status(400).json({ message: 'No active organization found' });
+      }
+      newUserData.organizationId = defaultOrg._id;
+    }
 
+    const user = new User(newUserData);
     await user.save();
 
     res.status(201).json({
@@ -103,4 +106,3 @@ router.post('/', [auth, authorize('admin')], [
 });
 
 module.exports = router;
-

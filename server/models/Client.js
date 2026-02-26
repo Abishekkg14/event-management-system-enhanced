@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const clientSchema = new mongoose.Schema({
+  organizationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Organization',
+    required: true,
+    index: true
+  },
   companyName: {
     type: String,
     required: [true, 'Company name is required'],
@@ -108,12 +114,11 @@ const clientSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Virtual for full contact name
-clientSchema.virtual('contactPerson.fullName').get(function() {
+clientSchema.virtual('contactPerson.fullName').get(function () {
   return `${this.contactPerson.firstName} ${this.contactPerson.lastName}`;
 });
 
-// Index for better query performance
+clientSchema.index({ organizationId: 1, companyName: 1 });
 clientSchema.index({ companyName: 1 });
 clientSchema.index({ 'contactPerson.email': 1 });
 clientSchema.index({ status: 1 });

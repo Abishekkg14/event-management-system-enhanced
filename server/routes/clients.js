@@ -1,13 +1,11 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const Client = require('../models/Client');
+const Organization = require('../models/Organization');
 const { auth, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
-// @route   GET /api/clients
-// @desc    Get all clients with filtering and pagination
-// @access  Private
 router.get('/', auth, async (req, res) => {
   try {
     const {
@@ -19,8 +17,11 @@ router.get('/', auth, async (req, res) => {
       sortBy = 'createdAt',
       sortOrder = 'desc'
     } = req.query;
-
     const filter = {};
+    if (req.user.role !== 'Super Admin') {
+      filter.organizationId = req.user.organizationId;
+    }
+
     if (status) filter.status = status;
     if (industry) filter.industry = industry;
     if (search) {
@@ -54,10 +55,7 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// @route   POST /api/clients
-// @desc    Create new client
-// @access  Private (Manager, Admin)
-router.post('/', [auth, authorize('admin', 'manager')], [
+router.post('/', [auth, authorize('Super Admin', 'Admin', 'Organizer')], [
   body('companyName').trim().notEmpty().withMessage('Company name is required'),
   body('contactPerson.firstName').trim().notEmpty().withMessage('Contact first name is required'),
   body('contactPerson.lastName').trim().notEmpty().withMessage('Contact last name is required'),
@@ -69,43 +67,66 @@ router.post('/', [auth, authorize('admin', 'manager')], [
       return res.status(400).json({ errors: errors.array() });
     }
 
+    if (!req.body.organizationId) {
+      if (req.user.organizationId) {
+        req.body.organizationId = req.user.organizationId;
+      } else {
+        const defaultOrg = await Organization.findOne({ status: 'active' }).sort({ createdAt: 1 });
+        if (!defaultOrg) {
+          return res.status(400).json({ message: 'No active organization found' });
+        }
+        req.body.organizationId = defaultOrg._id;
+      }
+    }
+
     const client = new Client(req.body);
     await client.save();
 
-    res.status(201).json({
-      message: 'Client created successfully',
-      client
-    });
+    res.status(201).json({ message: 'Client created successfully', client });
   } catch (error) {
     console.error('Create client error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// @route   PUT /api/clients/:id
-// @desc    Update client
-// @access  Private (Manager, Admin)
-router.put('/:id', [auth, authorize('admin', 'manager')], async (req, res) => {
+router.put('/:id', [auth, authorize('Super Admin', 'Admin', 'Organizer')], async (req, res) => {
   try {
-    const client = await Client.findByIdAndUpdate(
-      req.params.id,
+    const client = await Client.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        ...(req.user.role !== 'Super Admin' && { organizationId: req.user.organizationId })
+      },
       req.body,
       { new: true, runValidators: true }
     );
 
     if (!client) {
-      return res.status(404).json({ message: 'Client not found' });
+      return res.status(404).json({ message: 'Client not found or unauthorized' });
     }
 
-    res.json({
-      message: 'Client updated successfully',
-      client
-    });
+    res.json({ message: 'Client updated successfully', client });
   } catch (error) {
     console.error('Update client error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-module.exports = router;
+router.delete('/:id', [auth, authorize('Super Admin', 'Admin', 'Organizer')], async (req, res) => {
+  try {
+    const client = await Client.findOneAndDelete({
+      _id: req.params.id,
+      ...(req.user.role !== 'Super Admin' && { organizationId: req.user.organizationId })
+    });
 
+    if (!client) {
+      return res.status(404).json({ message: 'Client not found or unauthorized' });
+    }
+
+    res.json({ message: 'Client deleted successfully' });
+  } catch (error) {
+    console.error('Delete client error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+module.exports = router;

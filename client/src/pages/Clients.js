@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import 'bootstrap/dist/css/bootstrap.min.css';
+import { motion } from 'framer-motion';
+
+const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+const pageVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, staggerChildren: 0.07 } }
+};
+
+const rowVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: { opacity: 1, x: 0 }
+};
 
 function Clients() {
   const [clients, setClients] = useState([]);
@@ -10,89 +22,13 @@ function Clients() {
   const [clientBeingEdited, setClientBeingEdited] = useState(null);
   const [newClient, setNewClient] = useState({
     companyName: '',
-    contactPerson: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      position: ''
-    },
-    address: {
-      street: '',
-      city: '',
-      state: '',
-      country: '',
-      zipCode: ''
-    },
+    contactPerson: { firstName: '', lastName: '', email: '', phone: '', position: '' },
+    address: { street: '', city: '', state: '', country: '', zipCode: '' },
     industry: '',
     companySize: 'small',
     website: '',
     notes: ''
   });
-
-  // Mock client data
-  const mockClients = [
-    {
-      id: 1,
-      name: 'TechCorp Inc.',
-      contactPerson: 'John Smith',
-      email: 'john.smith@techcorp.com',
-      phone: '(555) 123-4567',
-      type: 'Corporate',
-      events: 4,
-      totalSpent: 120000
-    },
-    {
-      id: 2,
-      name: 'Hope Foundation',
-      contactPerson: 'Maria Rodriguez',
-      email: 'maria@hopefoundation.org',
-      phone: '(555) 234-5678',
-      type: 'Non-profit',
-      events: 2,
-      totalSpent: 45000
-    },
-    {
-      id: 3,
-      name: 'NextGen Devices',
-      contactPerson: 'David Chen',
-      email: 'david.chen@nextgendevices.com',
-      phone: '(555) 345-6789',
-      type: 'Corporate',
-      events: 3,
-      totalSpent: 95000
-    },
-    {
-      id: 4,
-      name: 'Global Finance Group',
-      contactPerson: 'Sarah Johnson',
-      email: 'sjohnson@globalfinance.com',
-      phone: '(555) 456-7890',
-      type: 'Corporate',
-      events: 2,
-      totalSpent: 75000
-    },
-    {
-      id: 5,
-      name: 'City of Riverside',
-      contactPerson: 'Michael Williams',
-      email: 'm.williams@riverside.gov',
-      phone: '(555) 567-8901',
-      type: 'Government',
-      events: 1,
-      totalSpent: 30000
-    },
-    {
-      id: 6,
-      name: 'Jennifer Taylor',
-      contactPerson: 'Jennifer Taylor',
-      email: 'jennifer.taylor@email.com',
-      phone: '(555) 678-9012',
-      type: 'Individual',
-      events: 2,
-      totalSpent: 15000
-    }
-  ];
 
   useEffect(() => {
     fetchClients();
@@ -101,20 +37,18 @@ function Clients() {
   const fetchClients = async () => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      
       if (!token) {
-        console.error('No auth token found');
         setLoading(false);
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/clients', {
-        headers: { 
+      const response = await fetch(`${API}/api/clients`, {
+        headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         const formattedClients = data.clients.map(client => ({
@@ -122,24 +56,18 @@ function Clients() {
           name: client.companyName,
           companyName: client.companyName,
           contactPerson: `${client.contactPerson?.firstName} ${client.contactPerson?.lastName}`,
-          email: client.contactPerson?.email,
-          phone: client.contactPerson?.phone,
-          type: client.companySize === 'large' || client.companySize === 'enterprise' ? 'Corporate' : 
-                client.industry === 'non-profit' ? 'Non-profit' : 'Small Business',
+          email: client.contactPerson?.email || '',
+          phone: client.contactPerson?.phone || '',
+          type: client.companySize === 'large' || client.companySize === 'enterprise' ? 'Corporate' :
+            client.industry === 'non-profit' ? 'Non-profit' : 'Small Business',
           events: client.totalEvents || 0,
           totalSpent: client.totalSpent || 0
         }));
         setClients(formattedClients);
-      } else {
-        console.error('Failed to fetch clients:', response.statusText);
-        // Fallback to mock data
-        setClients(mockClients);
       }
       setLoading(false);
     } catch (error) {
       console.error('Error fetching clients:', error);
-      // Fallback to mock data
-      setClients(mockClients);
       setLoading(false);
     }
   };
@@ -148,13 +76,9 @@ function Clients() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      
-      if (!token) {
-        alert('Please login first');
-        return;
-      }
+      if (!token) { alert('Please login first'); return; }
 
-      const response = await fetch('http://localhost:5000/api/clients', {
+      const response = await fetch(`${API}/api/clients`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -170,10 +94,10 @@ function Clients() {
           name: data.client.companyName,
           companyName: data.client.companyName,
           contactPerson: `${data.client.contactPerson?.firstName} ${data.client.contactPerson?.lastName}`,
-          email: data.client.contactPerson?.email,
-          phone: data.client.contactPerson?.phone,
-          type: data.client.companySize === 'large' || data.client.companySize === 'enterprise' ? 'Corporate' : 
-                data.client.industry === 'non-profit' ? 'Non-profit' : 'Small Business',
+          email: data.client.contactPerson?.email || '',
+          phone: data.client.contactPerson?.phone || '',
+          type: data.client.companySize === 'large' || data.client.companySize === 'enterprise' ? 'Corporate' :
+            data.client.industry === 'non-profit' ? 'Non-profit' : 'Small Business',
           events: 0,
           totalSpent: 0
         };
@@ -191,10 +115,27 @@ function Clients() {
     }
   };
 
-  const handleDeleteClient = (id) => {
-    if (!window.confirm('Delete this client?')) return;
-    // For production, call DELETE /api/clients/:id
-    setClients(clients.filter(c => c.id !== id));
+  const handleDeleteClient = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this client?')) return;
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch(`${API}/api/clients/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        setClients(clients.filter(c => c.id !== id));
+      } else {
+        const errorData = await response.json();
+        alert(errorData.message || 'Error deleting client');
+      }
+    } catch (error) {
+      console.error('Error deleting client:', error);
+      alert('Error deleting client. Please try again.');
+    }
   };
 
   const openEditClient = (client) => {
@@ -206,7 +147,6 @@ function Clients() {
     setClientBeingEdited(prev => {
       if (!prev) return prev;
       const updated = { ...prev };
-      // simple paths we expose in the UI
       if (path === 'name') updated.name = value;
       if (path === 'contactPerson') updated.contactPerson = value;
       if (path === 'email') updated.email = value;
@@ -219,7 +159,6 @@ function Clients() {
   const handleSaveClient = async (e) => {
     e.preventDefault();
     if (!clientBeingEdited) return;
-    // For production, call PUT /api/clients/:id
     setClients(clients.map(c => c.id === clientBeingEdited.id ? clientBeingEdited : c));
     setShowEditModal(false);
     setClientBeingEdited(null);
@@ -228,20 +167,8 @@ function Clients() {
   const resetForm = () => {
     setNewClient({
       companyName: '',
-      contactPerson: {
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        position: ''
-      },
-      address: {
-        street: '',
-        city: '',
-        state: '',
-        country: '',
-        zipCode: ''
-      },
+      contactPerson: { firstName: '', lastName: '', email: '', phone: '', position: '' },
+      address: { street: '', city: '', state: '', country: '', zipCode: '' },
       industry: '',
       companySize: 'small',
       website: '',
@@ -253,206 +180,153 @@ function Clients() {
     setSearchTerm(e.target.value);
   };
 
-  const filteredClients = clients.filter(client => 
-    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredClients = clients.filter(client =>
+    (client.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (client.contactPerson || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (client.email || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const getTypeBadgeClass = (type) => {
+    switch (type) {
+      case 'Corporate': return 'bg-primary';
+      case 'Non-profit': return 'bg-success';
+      case 'Government': return 'bg-warning';
+      case 'Individual': return 'bg-danger';
+      case 'Small Business': return 'bg-secondary';
+      default: return 'bg-secondary';
+    }
+  };
+
   return (
-    <div className="container-fluid">
-      <div className="container mt-4">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h2>Clients</h2>
-          <div className="d-flex">
-            <div className="input-group me-2">
-              <input 
-                type="text" 
-                className="form-control" 
-                placeholder="Search clients..." 
-                value={searchTerm}
-                onChange={handleSearch}
-              />
-              <button className="btn btn-outline-secondary" type="button">
-                <i className="bi bi-search"></i>
-              </button>
-            </div>
-            <button 
-              className="btn btn-success"
-              onClick={() => setShowAddModal(true)}
-            >
-              <i className="bi bi-plus-lg"></i> Add New Client
-            </button>
+    <motion.div initial="hidden" animate="visible" variants={pageVariants}>
+      <motion.div className="d-flex justify-content-between align-items-center mb-4" variants={rowVariants}>
+        <h2 className="fw-bold mb-0">Clients</h2>
+        <div className="d-flex gap-2">
+          <input type="text" className="form-control bg-white shadow-sm" placeholder="Search clients..." value={searchTerm}
+            onChange={handleSearch} style={{ maxWidth: 250 }} />
+          <button className="btn btn-primary shadow-sm" onClick={() => setShowAddModal(true)}>
+            <i className="bi bi-plus-lg me-1"></i> Add New Client
+          </button>
+        </div>
+      </motion.div>
+
+      {loading ? (
+        <div className="d-flex justify-content-center py-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
           </div>
         </div>
-
-        {loading ? (
-          <div className="d-flex justify-content-center">
-            <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
+      ) : filteredClients.length === 0 ? (
+        <div className="premium-card">
+          <div className="card-body text-center py-5">
+            <i className="bi bi-people" style={{ fontSize: '3rem', color: 'var(--text-secondary)' }}></i>
+            <p className="text-muted mt-3 mb-0" style={{ fontSize: '1.1rem' }}>
+              {searchTerm ? 'No clients found matching your search.' : 'No clients yet. Add your first client to get started!'}
+            </p>
           </div>
-        ) : (
-          <div className="row">
-            {filteredClients.map((client) => (
-              <div key={client.id} className="col-md-4 mb-4">
-                <div className="card h-100">
-                  <div className="card-body">
-                    <h5 className="card-title">{client.name}</h5>
-                    <span className={`badge ${
-                      client.type === 'Corporate' ? 'bg-primary' : 
-                      client.type === 'Non-profit' ? 'bg-success' :
-                      client.type === 'Government' ? 'bg-info' : 'bg-secondary'
-                    } mb-3`}>{client.type}</span>
-                    
-                    <div className="card-text">
-                      <p><strong>Contact:</strong> {client.contactPerson}</p>
-                      <p>
-                        <strong>Email:</strong> <a href={`mailto:${client.email}`}>{client.email}</a>
-                      </p>
-                      <p>
-                        <strong>Phone:</strong> <a href={`tel:${client.phone}`}>{client.phone}</a>
-                      </p>
-                      <p><strong>Events:</strong> {client.events}</p>
-                      <p><strong>Total Spent:</strong> ${client.totalSpent.toLocaleString()}</p>
-                    </div>
-                  </div>
-                  <div className="card-footer bg-transparent d-flex justify-content-between">
-                    <button className="btn btn-outline-primary" onClick={() => openEditClient(client)}>
-                      <i className="bi bi-pencil"></i> Edit
-                    </button>
-                    <button className="btn btn-outline-danger" onClick={() => handleDeleteClient(client.id)}>
-                      <i className="bi bi-trash"></i> Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-            
-            {filteredClients.length === 0 && !loading && (
-              <div className="text-center p-5">
-                <h4>No clients found matching your search.</h4>
-                <p>Try adjusting your search criteria.</p>
-              </div>
-            )}
+        </div>
+      ) : (
+        <div className="premium-card overflow-hidden">
+          <div className="table-responsive">
+            <table className="table table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Contact</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Type</th>
+                  <th>Events</th>
+                  <th>Total Spent</th>
+                  <th className="text-end">Actions</th>
+                </tr>
+              </thead>
+              <motion.tbody variants={pageVariants} initial="hidden" animate="visible" className="border-top-0">
+                {filteredClients.map((client) => (
+                  <motion.tr key={client.id} variants={rowVariants}>
+                    <td className="fw-semibold text-dark">{client.name}</td>
+                    <td className="text-secondary">{client.contactPerson}</td>
+                    <td><a href={`mailto:${client.email}`} className="text-decoration-none">{client.email}</a></td>
+                    <td><a href={`tel:${client.phone}`} className="text-decoration-none text-secondary">{client.phone}</a></td>
+                    <td>
+                      <span className={`badge ${getTypeBadgeClass(client.type)}`}>{client.type}</span>
+                    </td>
+                    <td className="text-secondary">{client.events}</td>
+                    <td className="fw-medium">${client.totalSpent.toLocaleString()}</td>
+                    <td>
+                      <div className="d-flex gap-2 justify-content-end">
+                        <button className="btn btn-sm btn-outline-primary" onClick={() => openEditClient(client)} title="Edit Client">
+                          <i className="bi bi-pencil"></i>
+                        </button>
+                        <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteClient(client.id)} title="Delete Client">
+                          <i className="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </motion.tr>
+                ))}
+              </motion.tbody>
+            </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Add Client Modal */}
       {showAddModal && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Add New Client</h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
-                  onClick={() => setShowAddModal(false)}
-                ></button>
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(15, 30, 58, 0.4)' }}>
+          <div className="modal-dialog modal-lg modal-dialog-centered">
+            <div className="modal-content shadow-lg border-0">
+              <div className="modal-header bg-light border-bottom px-4 py-3">
+                <h5 className="modal-title fw-bold text-dark">Add New Client</h5>
+                <button type="button" className="btn-close" onClick={() => setShowAddModal(false)} />
               </div>
               <form onSubmit={handleAddClient}>
-                <div className="modal-body">
+                <div className="modal-body px-4 py-4">
                   <div className="row">
                     <div className="col-md-6 mb-3">
-                      <label className="form-label">Company Name *</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={newClient.companyName}
-                        onChange={(e) => setNewClient({...newClient, companyName: e.target.value})}
-                        required
-                      />
+                      <label className="form-label fw-medium text-secondary">Company Name *</label>
+                      <input type="text" className="form-control bg-white" value={newClient.companyName}
+                        onChange={(e) => setNewClient({ ...newClient, companyName: e.target.value })} required />
                     </div>
                     <div className="col-md-6 mb-3">
                       <label className="form-label">Industry</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={newClient.industry}
-                        onChange={(e) => setNewClient({...newClient, industry: e.target.value})}
-                      />
+                      <input type="text" className="form-control" value={newClient.industry}
+                        onChange={(e) => setNewClient({ ...newClient, industry: e.target.value })} />
                     </div>
                   </div>
-
                   <div className="row">
                     <div className="col-md-6 mb-3">
                       <label className="form-label">Contact First Name *</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={newClient.contactPerson.firstName}
-                        onChange={(e) => setNewClient({
-                          ...newClient,
-                          contactPerson: {...newClient.contactPerson, firstName: e.target.value}
-                        })}
-                        required
-                      />
+                      <input type="text" className="form-control" value={newClient.contactPerson.firstName}
+                        onChange={(e) => setNewClient({ ...newClient, contactPerson: { ...newClient.contactPerson, firstName: e.target.value } })} required />
                     </div>
                     <div className="col-md-6 mb-3">
                       <label className="form-label">Contact Last Name *</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={newClient.contactPerson.lastName}
-                        onChange={(e) => setNewClient({
-                          ...newClient,
-                          contactPerson: {...newClient.contactPerson, lastName: e.target.value}
-                        })}
-                        required
-                      />
+                      <input type="text" className="form-control" value={newClient.contactPerson.lastName}
+                        onChange={(e) => setNewClient({ ...newClient, contactPerson: { ...newClient.contactPerson, lastName: e.target.value } })} required />
                     </div>
                   </div>
-
                   <div className="row">
                     <div className="col-md-6 mb-3">
                       <label className="form-label">Contact Email *</label>
-                      <input
-                        type="email"
-                        className="form-control"
-                        value={newClient.contactPerson.email}
-                        onChange={(e) => setNewClient({
-                          ...newClient,
-                          contactPerson: {...newClient.contactPerson, email: e.target.value}
-                        })}
-                        required
-                      />
+                      <input type="email" className="form-control" value={newClient.contactPerson.email}
+                        onChange={(e) => setNewClient({ ...newClient, contactPerson: { ...newClient.contactPerson, email: e.target.value } })} required />
                     </div>
                     <div className="col-md-6 mb-3">
                       <label className="form-label">Contact Phone</label>
-                      <input
-                        type="tel"
-                        className="form-control"
-                        value={newClient.contactPerson.phone}
-                        onChange={(e) => setNewClient({
-                          ...newClient,
-                          contactPerson: {...newClient.contactPerson, phone: e.target.value}
-                        })}
-                      />
+                      <input type="tel" className="form-control" value={newClient.contactPerson.phone}
+                        onChange={(e) => setNewClient({ ...newClient, contactPerson: { ...newClient.contactPerson, phone: e.target.value } })} />
                     </div>
                   </div>
-
                   <div className="row">
                     <div className="col-md-6 mb-3">
                       <label className="form-label">Position</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={newClient.contactPerson.position}
-                        onChange={(e) => setNewClient({
-                          ...newClient,
-                          contactPerson: {...newClient.contactPerson, position: e.target.value}
-                        })}
-                      />
+                      <input type="text" className="form-control" value={newClient.contactPerson.position}
+                        onChange={(e) => setNewClient({ ...newClient, contactPerson: { ...newClient.contactPerson, position: e.target.value } })} />
                     </div>
                     <div className="col-md-6 mb-3">
                       <label className="form-label">Company Size</label>
-                      <select
-                        className="form-select"
-                        value={newClient.companySize}
-                        onChange={(e) => setNewClient({...newClient, companySize: e.target.value})}
-                      >
+                      <select className="form-select" value={newClient.companySize}
+                        onChange={(e) => setNewClient({ ...newClient, companySize: e.target.value })}>
                         <option value="startup">Startup</option>
                         <option value="small">Small</option>
                         <option value="medium">Medium</option>
@@ -461,52 +335,27 @@ function Clients() {
                       </select>
                     </div>
                   </div>
-
                   <div className="row">
                     <div className="col-md-6 mb-3">
                       <label className="form-label">Website</label>
-                      <input
-                        type="url"
-                        className="form-control"
-                        value={newClient.website}
-                        onChange={(e) => setNewClient({...newClient, website: e.target.value})}
-                      />
+                      <input type="url" className="form-control" value={newClient.website}
+                        onChange={(e) => setNewClient({ ...newClient, website: e.target.value })} />
                     </div>
                     <div className="col-md-6 mb-3">
                       <label className="form-label">City</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={newClient.address.city}
-                        onChange={(e) => setNewClient({
-                          ...newClient,
-                          address: {...newClient.address, city: e.target.value}
-                        })}
-                      />
+                      <input type="text" className="form-control" value={newClient.address.city}
+                        onChange={(e) => setNewClient({ ...newClient, address: { ...newClient.address, city: e.target.value } })} />
                     </div>
                   </div>
-
                   <div className="mb-3">
-                    <label className="form-label">Notes</label>
-                    <textarea
-                      className="form-control"
-                      rows="3"
-                      value={newClient.notes}
-                      onChange={(e) => setNewClient({...newClient, notes: e.target.value})}
-                    ></textarea>
+                    <label className="form-label fw-medium text-secondary">Notes</label>
+                    <textarea className="form-control bg-white" rows="3" value={newClient.notes}
+                      onChange={(e) => setNewClient({ ...newClient, notes: e.target.value })} />
                   </div>
                 </div>
-                <div className="modal-footer">
-                  <button 
-                    type="button" 
-                    className="btn btn-secondary" 
-                    onClick={() => setShowAddModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn btn-primary">
-                    Add Client
-                  </button>
+                <div className="modal-footer bg-light px-4 py-3 border-top">
+                  <button type="button" className="btn btn-outline-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary px-4">Add Client</button>
                 </div>
               </form>
             </div>
@@ -514,65 +363,40 @@ function Clients() {
         </div>
       )}
 
-      {/* Edit Client Modal */}
       {showEditModal && clientBeingEdited && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Edit Client</h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
-                  onClick={() => { setShowEditModal(false); setClientBeingEdited(null); }}
-                ></button>
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(15, 30, 58, 0.4)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content shadow-lg border-0">
+              <div className="modal-header bg-light border-bottom px-4 py-3">
+                <h5 className="modal-title fw-bold text-dark">Edit Client</h5>
+                <button type="button" className="btn-close" onClick={() => { setShowEditModal(false); setClientBeingEdited(null); }} />
               </div>
               <form onSubmit={handleSaveClient}>
-                <div className="modal-body">
+                <div className="modal-body px-4 py-4">
                   <div className="mb-3">
                     <label className="form-label">Name</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={clientBeingEdited.name}
-                      onChange={(e) => handleEditChange('name', e.target.value)}
-                      required
-                    />
+                    <input type="text" className="form-control" value={clientBeingEdited.name}
+                      onChange={(e) => handleEditChange('name', e.target.value)} required />
                   </div>
                   <div className="mb-3">
                     <label className="form-label">Contact Person</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={clientBeingEdited.contactPerson}
-                      onChange={(e) => handleEditChange('contactPerson', e.target.value)}
-                    />
+                    <input type="text" className="form-control" value={clientBeingEdited.contactPerson}
+                      onChange={(e) => handleEditChange('contactPerson', e.target.value)} />
                   </div>
                   <div className="mb-3">
                     <label className="form-label">Email</label>
-                    <input
-                      type="email"
-                      className="form-control"
-                      value={clientBeingEdited.email}
-                      onChange={(e) => handleEditChange('email', e.target.value)}
-                    />
+                    <input type="email" className="form-control" value={clientBeingEdited.email}
+                      onChange={(e) => handleEditChange('email', e.target.value)} />
                   </div>
                   <div className="mb-3">
                     <label className="form-label">Phone</label>
-                    <input
-                      type="tel"
-                      className="form-control"
-                      value={clientBeingEdited.phone}
-                      onChange={(e) => handleEditChange('phone', e.target.value)}
-                    />
+                    <input type="tel" className="form-control" value={clientBeingEdited.phone}
+                      onChange={(e) => handleEditChange('phone', e.target.value)} />
                   </div>
                   <div className="mb-3">
                     <label className="form-label">Type</label>
-                    <select
-                      className="form-select"
-                      value={clientBeingEdited.type}
-                      onChange={(e) => handleEditChange('type', e.target.value)}
-                    >
+                    <select className="form-select" value={clientBeingEdited.type}
+                      onChange={(e) => handleEditChange('type', e.target.value)}>
                       <option value="Corporate">Corporate</option>
                       <option value="Non-profit">Non-profit</option>
                       <option value="Government">Government</option>
@@ -581,24 +405,16 @@ function Clients() {
                     </select>
                   </div>
                 </div>
-                <div className="modal-footer">
-                  <button 
-                    type="button" 
-                    className="btn btn-secondary" 
-                    onClick={() => { setShowEditModal(false); setClientBeingEdited(null); }}
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn btn-primary">
-                    Save Changes
-                  </button>
+                <div className="modal-footer bg-light px-4 py-3 border-top">
+                  <button type="button" className="btn btn-outline-secondary" onClick={() => { setShowEditModal(false); setClientBeingEdited(null); }}>Cancel</button>
+                  <button type="submit" className="btn btn-primary px-4">Save Changes</button>
                 </div>
               </form>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 

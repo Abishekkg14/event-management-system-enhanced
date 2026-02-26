@@ -1,5 +1,45 @@
 import React, { useState, useEffect } from 'react';
-import 'bootstrap/dist/css/bootstrap.min.css';
+import { motion } from 'framer-motion';
+
+const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+const fadeIn = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.06 } }
+};
+
+const rowVariant = {
+  hidden: { opacity: 0, x: -10 },
+  visible: { opacity: 1, x: 0 }
+};
+
+function getDeptBadgeClass(department) {
+  const map = {
+    Management: 'badge bg-primary',
+    Operations: 'badge bg-success',
+    Sales: 'badge bg-warning text-dark',
+    Technical: 'badge bg-info text-dark',
+    Marketing: 'badge bg-secondary',
+    Planning: 'badge bg-primary',
+    'Food Services': 'badge bg-success',
+    Finance: 'badge bg-danger'
+  };
+  return map[department] || 'badge bg-secondary';
+}
+
+function getRoleBadgeClass(role) {
+  const map = {
+    admin: 'badge bg-danger',
+    manager: 'badge bg-warning text-dark',
+    staff: 'badge bg-info text-dark'
+  };
+  return map[role] || 'badge bg-secondary';
+}
 
 function Staff() {
   const [staffMembers, setStaffMembers] = useState([]);
@@ -14,11 +54,10 @@ function Staff() {
     lastName: '',
     email: '',
     password: '',
-    role: 'staff',
+    role: 'Organizer',
     phone: ''
   });
 
-  // Mock staff data
   const mockStaffMembers = [
     { id: 1, name: 'Emily Johnson', role: 'Event Manager', email: 'emily.j@eventco.com', phone: '(555) 123-4567', avatar: 'https://randomuser.me/api/portraits/women/32.jpg', department: 'Management', eventsManaged: 24, joinDate: '2018-05-12' },
     { id: 2, name: 'Michael Brown', role: 'Logistics Coordinator', email: 'michael.b@eventco.com', phone: '(555) 234-5678', avatar: 'https://randomuser.me/api/portraits/men/45.jpg', department: 'Operations', eventsManaged: 18, joinDate: '2019-02-23' },
@@ -39,20 +78,20 @@ function Staff() {
   const fetchStaff = async () => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      
+
       if (!token) {
         console.error('No auth token found');
         setLoading(false);
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/staff', {
-        headers: { 
+      const response = await fetch(`${API}/api/staff`, {
+        headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         const formattedStaff = data.staff.map(member => ({
@@ -70,14 +109,11 @@ function Staff() {
         }));
         setStaffMembers(formattedStaff);
       } else {
-        console.error('Failed to fetch staff:', response.statusText);
-        // Fallback to mock data
         setStaffMembers(mockStaffMembers);
       }
       setLoading(false);
     } catch (error) {
       console.error('Error fetching staff:', error);
-      // Fallback to mock data
       setStaffMembers(mockStaffMembers);
       setLoading(false);
     }
@@ -87,13 +123,13 @@ function Staff() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      
+
       if (!token) {
         alert('Please login first');
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/staff', {
+      const response = await fetch(`${API}/api/staff`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -132,7 +168,7 @@ function Staff() {
   };
 
   const resetForm = () => {
-    setNewStaff({ firstName: '', lastName: '', email: '', password: '', role: 'staff', phone: '' });
+    setNewStaff({ firstName: '', lastName: '', email: '', password: '', role: 'Organizer', phone: '' });
   };
 
   const handleRoleFilter = (e) => { setFilterRole(e.target.value); };
@@ -140,7 +176,6 @@ function Staff() {
 
   const handleDeleteStaff = (id) => {
     if (!window.confirm('Remove this staff member?')) return;
-    // For production, call DELETE /api/staff/:id
     setStaffMembers(staffMembers.filter(s => s.id !== id));
   };
 
@@ -165,7 +200,6 @@ function Staff() {
   const handleSaveStaff = (e) => {
     e.preventDefault();
     if (!staffBeingEdited) return;
-    // For production, call PUT /api/staff/:id
     setStaffMembers(staffMembers.map(s => s.id === staffBeingEdited.id ? staffBeingEdited : s));
     setShowEditModal(false);
     setStaffBeingEdited(null);
@@ -190,86 +224,115 @@ function Staff() {
   };
 
   return (
-    <div className="container-fluid">
-      <div className="container mt-4">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h2>Staff</h2>
-          <div>
-            <button className="btn btn-success" onClick={() => setShowAddModal(true)}>
-              <i className="bi bi-plus-lg"></i> Add New Staff Member
-            </button>
-          </div>
-        </div>
-
-        <div className="row mb-4">
-          <div className="col-md-6">
-            <div className="input-group">
-              <input type="text" className="form-control" placeholder="Search staff..." value={searchTerm} onChange={handleSearch} />
-              <button className="btn btn-outline-secondary" type="button"><i className="bi bi-search"></i></button>
-            </div>
-          </div>
-          <div className="col-md-6">
-            <select className="form-select" value={filterRole} onChange={handleRoleFilter}>
-              {departments.map((department, index) => (
-                <option key={index} value={department}>{department === 'all' ? 'All Departments' : department}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="d-flex justify-content-center"><div className="spinner-border text-primary" role="status"><span className="visually-hidden">Loading...</span></div></div>
-        ) : (
-          <div className="row">
-            {filteredStaffMembers.map((staff) => (
-              <div key={staff.id} className="col-md-3 mb-4">
-                <div className="card h-100">
-                  <img src={staff.avatar} className="card-img-top rounded-circle mx-auto mt-3" alt={staff.name} style={{ width: '120px', height: '120px', objectFit: 'cover' }} />
-                  <div className="card-body text-center">
-                    <h5 className="card-title">{staff.name}</h5>
-                    <p className="card-text fw-bold">{staff.role}</p>
-                    <span className="badge bg-info mb-3">{staff.department}</span>
-                    <div className="card-text text-start">
-                      <p><i className="bi bi-envelope me-2"></i><a href={`mailto:${staff.email}`}>{staff.email}</a></p>
-                      <p><i className="bi bi-telephone me-2"></i><a href={`tel:${staff.phone}`}>{staff.phone}</a></p>
-                      <p><i className="bi bi-calendar-event me-2"></i><span>{staff.eventsManaged} Events Managed</span></p>
-                      <p><i className="bi bi-clock-history me-2"></i><span>Service: {calculateServiceLength(staff.joinDate)}</span></p>
-                    </div>
-                  </div>
-                  <div className="card-footer bg-transparent d-flex justify-content-between">
-                    <button className="btn btn-outline-primary flex-grow-1 me-2" onClick={() => openEditStaff(staff)}>
-                      <i className="bi bi-pencil"></i> Edit
-                    </button>
-                    <button className="btn btn-outline-danger flex-grow-1" onClick={() => handleDeleteStaff(staff.id)}>
-                      <i className="bi bi-trash"></i> Remove
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {filteredStaffMembers.length === 0 && !loading && (
-              <div className="text-center p-5"><h4>No staff members found matching your criteria.</h4><p>Try adjusting your search or filter settings.</p></div>
-            )}
-          </div>
-        )}
+    <motion.div initial="hidden" animate="visible" variants={fadeIn}>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2 className="fw-bold mb-0">Staff</h2>
+        <button className="btn btn-primary shadow-sm" onClick={() => setShowAddModal(true)}>
+          <i className="bi bi-plus-lg me-1"></i> Add Staff
+        </button>
       </div>
 
-      {/* Add Staff Modal */}
+      <div className="row mb-4">
+        <div className="col-md-6">
+          <div className="input-group shadow-sm border-subtle border rounded">
+            <input type="text" className="form-control border-0" placeholder="Search staff..." value={searchTerm} onChange={handleSearch} />
+            <button className="btn border-0 text-secondary" type="button" style={{ background: 'var(--bg-web)' }}><i className="bi bi-search"></i></button>
+          </div>
+        </div>
+        <div className="col-md-6">
+          <select className="form-select shadow-sm" style={{ border: '1px solid var(--border-color)' }} value={filterRole} onChange={handleRoleFilter}>
+            {departments.map((department, index) => (
+              <option key={index} value={department}>{department === 'all' ? 'All Departments' : department}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="d-flex justify-content-center py-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      ) : (
+        <div className="premium-card overflow-hidden">
+          <div className="table-responsive">
+            <table className="table table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Department</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Events</th>
+                  <th>Service</th>
+                  <th className="text-end">Actions</th>
+                </tr>
+              </thead>
+              <motion.tbody variants={staggerContainer} initial="hidden" animate="visible" className="border-top-0">
+                {filteredStaffMembers.map((staff) => (
+                  <motion.tr key={staff.id} variants={rowVariant}>
+                    <td>
+                      <div className="d-flex align-items-center">
+                        <img
+                          src={staff.avatar}
+                          alt={staff.name}
+                          className="rounded-circle me-2 border border-2 border-white shadow-sm"
+                          style={{ width: '36px', height: '36px', objectFit: 'cover' }}
+                        />
+                        <span className="fw-semibold text-dark">{staff.name}</span>
+                      </div>
+                    </td>
+                    <td><span className={getRoleBadgeClass(staff.role)}>{staff.role}</span></td>
+                    <td><span className={getDeptBadgeClass(staff.department)}>{staff.department}</span></td>
+                    <td><a href={`mailto:${staff.email}`} className="text-decoration-none">{staff.email}</a></td>
+                    <td className="text-secondary">{staff.phone}</td>
+                    <td className="fw-medium text-secondary">{staff.eventsManaged}</td>
+                    <td className="text-secondary">{calculateServiceLength(staff.joinDate)}</td>
+                    <td>
+                      <div className="d-flex gap-2 justify-content-end">
+                        <button className="btn btn-sm btn-outline-primary" onClick={() => openEditStaff(staff)} title="Edit">
+                          <i className="bi bi-pencil"></i>
+                        </button>
+                        <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteStaff(staff.id)} title="Delete">
+                          <i className="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </motion.tr>
+                ))}
+              </motion.tbody>
+            </table>
+            {filteredStaffMembers.length === 0 && !loading && (
+              <div className="card-body text-center p-5">
+                <i className="bi bi-person-badge text-secondary mb-3" style={{ fontSize: '3rem' }}></i>
+                <h5 className="text-dark">No staff members found matching your criteria.</h5>
+                <p className="text-muted">Try adjusting your search or filter settings.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {showAddModal && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header"><h5 className="modal-title">Add New Staff Member</h5><button type="button" className="btn-close" onClick={() => setShowAddModal(false)}></button></div>
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(15, 30, 58, 0.4)' }}>
+          <div className="modal-dialog modal-lg modal-dialog-centered">
+            <div className="modal-content shadow-lg border-0">
+              <div className="modal-header bg-light border-bottom px-4 py-3">
+                <h5 className="modal-title fw-bold text-dark">Add New Staff Member</h5>
+                <button type="button" className="btn-close" onClick={() => setShowAddModal(false)}></button>
+              </div>
               <form onSubmit={handleAddStaff}>
-                <div className="modal-body">
+                <div className="modal-body px-4 py-4">
                   <div className="row">
                     <div className="col-md-6 mb-3">
-                      <label className="form-label">First Name *</label>
+                      <label className="form-label fw-medium text-secondary">First Name *</label>
                       <input
                         type="text"
-                        className="form-control"
+                        className="form-control bg-white"
                         value={newStaff.firstName}
-                        onChange={(e) => setNewStaff({...newStaff, firstName: e.target.value})}
+                        onChange={(e) => setNewStaff({ ...newStaff, firstName: e.target.value })}
                         required
                       />
                     </div>
@@ -279,12 +342,11 @@ function Staff() {
                         type="text"
                         className="form-control"
                         value={newStaff.lastName}
-                        onChange={(e) => setNewStaff({...newStaff, lastName: e.target.value})}
+                        onChange={(e) => setNewStaff({ ...newStaff, lastName: e.target.value })}
                         required
                       />
                     </div>
                   </div>
-
                   <div className="row">
                     <div className="col-md-6 mb-3">
                       <label className="form-label">Email *</label>
@@ -292,7 +354,7 @@ function Staff() {
                         type="email"
                         className="form-control"
                         value={newStaff.email}
-                        onChange={(e) => setNewStaff({...newStaff, email: e.target.value})}
+                        onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })}
                         required
                       />
                     </div>
@@ -302,23 +364,24 @@ function Staff() {
                         type="tel"
                         className="form-control"
                         value={newStaff.phone}
-                        onChange={(e) => setNewStaff({...newStaff, phone: e.target.value})}
+                        onChange={(e) => setNewStaff({ ...newStaff, phone: e.target.value })}
                       />
                     </div>
                   </div>
-
                   <div className="row">
                     <div className="col-md-6 mb-3">
                       <label className="form-label">Role *</label>
                       <select
                         className="form-select"
                         value={newStaff.role}
-                        onChange={(e) => setNewStaff({...newStaff, role: e.target.value})}
+                        onChange={(e) => setNewStaff({ ...newStaff, role: e.target.value })}
                         required
                       >
-                        <option value="staff">Staff</option>
-                        <option value="manager">Manager</option>
-                        <option value="admin">Admin</option>
+                        <option value="Admin">Admin</option>
+                        <option value="Organizer">Organizer</option>
+                        <option value="Vendor">Vendor</option>
+                        <option value="Client">Client</option>
+                        <option value="Attendee">Attendee</option>
                       </select>
                     </div>
                     <div className="col-md-6 mb-3">
@@ -327,7 +390,7 @@ function Staff() {
                         type="password"
                         className="form-control"
                         value={newStaff.password}
-                        onChange={(e) => setNewStaff({...newStaff, password: e.target.value})}
+                        onChange={(e) => setNewStaff({ ...newStaff, password: e.target.value })}
                         minLength="6"
                         required
                       />
@@ -335,34 +398,57 @@ function Staff() {
                     </div>
                   </div>
                 </div>
-                <div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button><button type="submit" className="btn btn-primary">Add Staff Member</button></div>
+                <div className="modal-footer bg-light px-4 py-3 border-top">
+                  <button type="button" className="btn btn-outline-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary px-4">Add Staff Member</button>
+                </div>
               </form>
             </div>
           </div>
         </div>
       )}
 
-      {/* Edit Staff Modal */}
       {showEditModal && staffBeingEdited && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header"><h5 className="modal-title">Edit Staff</h5><button type="button" className="btn-close" onClick={() => { setShowEditModal(false); setStaffBeingEdited(null); }}></button></div>
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(15, 30, 58, 0.4)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content shadow-lg border-0">
+              <div className="modal-header bg-light border-bottom px-4 py-3">
+                <h5 className="modal-title fw-bold text-dark">Edit Staff</h5>
+                <button type="button" className="btn-close" onClick={() => { setShowEditModal(false); setStaffBeingEdited(null); }}></button>
+              </div>
               <form onSubmit={handleSaveStaff}>
-                <div className="modal-body">
-                  <div className="mb-3"><label className="form-label">Name</label><input type="text" className="form-control" value={staffBeingEdited.name} onChange={(e) => handleEditChange('name', e.target.value)} required /></div>
-                  <div className="mb-3"><label className="form-label">Role</label><input type="text" className="form-control" value={staffBeingEdited.role} onChange={(e) => handleEditChange('role', e.target.value)} /></div>
-                  <div className="mb-3"><label className="form-label">Email</label><input type="email" className="form-control" value={staffBeingEdited.email} onChange={(e) => handleEditChange('email', e.target.value)} /></div>
-                  <div className="mb-3"><label className="form-label">Phone</label><input type="tel" className="form-control" value={staffBeingEdited.phone} onChange={(e) => handleEditChange('phone', e.target.value)} /></div>
-                  <div className="mb-3"><label className="form-label">Department</label><input type="text" className="form-control" value={staffBeingEdited.department} onChange={(e) => handleEditChange('department', e.target.value)} /></div>
+                <div className="modal-body px-4 py-4">
+                  <div className="mb-3">
+                    <label className="form-label">Name</label>
+                    <input type="text" className="form-control" value={staffBeingEdited.name} onChange={(e) => handleEditChange('name', e.target.value)} required />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Role</label>
+                    <input type="text" className="form-control" value={staffBeingEdited.role} onChange={(e) => handleEditChange('role', e.target.value)} />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Email</label>
+                    <input type="email" className="form-control" value={staffBeingEdited.email} onChange={(e) => handleEditChange('email', e.target.value)} />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Phone</label>
+                    <input type="tel" className="form-control" value={staffBeingEdited.phone} onChange={(e) => handleEditChange('phone', e.target.value)} />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Department</label>
+                    <input type="text" className="form-control" value={staffBeingEdited.department} onChange={(e) => handleEditChange('department', e.target.value)} />
+                  </div>
                 </div>
-                <div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={() => { setShowEditModal(false); setStaffBeingEdited(null); }}>Cancel</button><button type="submit" className="btn btn-primary">Save Changes</button></div>
+                <div className="modal-footer bg-light px-4 py-3 border-top">
+                  <button type="button" className="btn btn-outline-secondary" onClick={() => { setShowEditModal(false); setStaffBeingEdited(null); }}>Cancel</button>
+                  <button type="submit" className="btn btn-primary px-4">Save Changes</button>
+                </div>
               </form>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 

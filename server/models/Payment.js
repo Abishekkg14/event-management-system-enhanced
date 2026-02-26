@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const paymentSchema = new mongoose.Schema({
+  organizationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Organization',
+    required: true,
+    index: true
+  },
   event: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Event',
@@ -88,17 +94,16 @@ const paymentSchema = new mongoose.Schema({
     refundReason: String,
     refundMethod: String
   },
-  attachments: [String] // URLs to payment receipts, invoices, etc.
+  attachments: [String]
 }, {
   timestamps: true
 });
 
-// Virtual for net amount (amount - fees)
-paymentSchema.virtual('netAmount').get(function() {
+paymentSchema.virtual('netAmount').get(function () {
   return this.amount - this.fees.totalFees;
 });
 
-// Index for better query performance
+paymentSchema.index({ organizationId: 1, event: 1 });
 paymentSchema.index({ event: 1 });
 paymentSchema.index({ client: 1 });
 paymentSchema.index({ status: 1 });

@@ -4,14 +4,14 @@ const User = require('../models/User');
 const auth = async (req, res, next) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
-    
+
     if (!token) {
       return res.status(401).json({ message: 'No token, authorization denied' });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
     const user = await User.findById(decoded.id).select('-password');
-    
+
     if (!user) {
       return res.status(401).json({ message: 'Token is not valid' });
     }
@@ -34,8 +34,8 @@ const authorize = (...roles) => {
     }
 
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        message: `Access denied. Required role: ${roles.join(' or ')}` 
+      return res.status(403).json({
+        message: `Access denied. Required role: ${roles.join(' or ')}`
       });
     }
 
@@ -43,5 +43,23 @@ const authorize = (...roles) => {
   };
 };
 
-module.exports = { auth, authorize };
+const checkOrganization = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+
+  if (req.user.role === 'Super Admin') {
+    return next();
+  }
+
+  const targetOrgId = req.params.organizationId || req.body.organizationId || req.query.organizationId;
+
+  if (targetOrgId && targetOrgId.toString() !== req.user.organizationId.toString()) {
+    return res.status(403).json({ message: 'Access denied to this organization\'s resources' });
+  }
+
+  next();
+};
+
+module.exports = { auth, authorize, checkOrganization };
 

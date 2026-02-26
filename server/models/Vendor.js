@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const vendorSchema = new mongoose.Schema({
+  organizationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Organization',
+    required: true,
+    index: true
+  },
   businessName: {
     type: String,
     required: [true, 'Business name is required'],
@@ -88,7 +94,7 @@ const vendorSchema = new mongoose.Schema({
   rating: {
     average: {
       type: Number,
-      min: 1,
+      min: 0,
       max: 5,
       default: 0
     },
@@ -97,7 +103,7 @@ const vendorSchema = new mongoose.Schema({
       default: 0
     }
   },
-  portfolio: [String], // URLs to portfolio images/videos
+  portfolio: [String],
   certifications: [String],
   notes: {
     type: String,
@@ -118,12 +124,11 @@ const vendorSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Virtual for full contact name
-vendorSchema.virtual('contactPerson.fullName').get(function() {
+vendorSchema.virtual('contactPerson.fullName').get(function () {
   return `${this.contactPerson.firstName} ${this.contactPerson.lastName}`;
 });
 
-// Index for better query performance
+vendorSchema.index({ organizationId: 1, businessName: 1 });
 vendorSchema.index({ businessName: 1 });
 vendorSchema.index({ services: 1 });
 vendorSchema.index({ status: 1 });

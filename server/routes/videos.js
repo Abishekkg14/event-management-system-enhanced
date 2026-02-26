@@ -7,47 +7,37 @@ const { GridFSBucket } = require('mongodb');
 
 const router = express.Router();
 
-// ensure tmp directory exists
 const tmpDir = path.join(__dirname, '..', 'tmp');
 if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
-// multer disk storage for large files
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, tmpDir),
     filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
   }),
-  limits: { fileSize: 1024 * 1024 * 1024 } // 1GB limit
+  limits: { fileSize: 1024 * 1024 * 1024 }
 });
 
 let bucket;
-// initialize bucket after mongoose connects
 mongoose.connection.once('open', () => {
   bucket = new GridFSBucket(mongoose.connection.db, {
     bucketName: 'videos',
-    chunkSizeBytes: 1024 * 1024 // 1MB chunks
+    chunkSizeBytes: 1024 * 1024
   });
 });
 
-// Upload endpoint: POST /api/videos/upload
 router.post('/upload', upload.single('file'), (req, res) => {
-  console.log('Upload request received');
-  
   if (!req.file) {
-    console.error('No file in request');
     return res.status(400).json({ error: 'No file uploaded' });
   }
 
   if (!bucket) {
-    console.error('GridFS bucket not initialized');
     return res.status(500).json({ error: 'Database not ready. Please try again.' });
   }
 
   const filePath = req.file.path;
   const filename = req.file.originalname;
   const contentType = req.file.mimetype || 'video/mp4';
-  
-  console.log('Uploading file:', filename, 'Size:', req.file.size, 'Type:', contentType);
 
   const uploadStream = bucket.openUploadStream(filename, {
     contentType,
@@ -57,22 +47,19 @@ router.post('/upload', upload.single('file'), (req, res) => {
   const readStream = fs.createReadStream(filePath);
   readStream.pipe(uploadStream)
     .on('error', (err) => {
-      console.error('GridFS upload error:', err);
-      try { fs.unlinkSync(filePath); } catch (e) {}
+      try { fs.unlinkSync(filePath); } catch (e) { }
       res.status(500).json({ error: 'Upload failed: ' + err.message });
     })
     .on('finish', () => {
-      try { fs.unlinkSync(filePath); } catch (e) {}
-      console.log('Video uploaded to GridFS:', uploadStream.id.toString());
-      res.json({ 
+      try { fs.unlinkSync(filePath); } catch (e) { }
+      res.json({
         message: 'Video uploaded successfully',
-        fileId: uploadStream.id.toString(), 
-        filename 
+        fileId: uploadStream.id.toString(),
+        filename
       });
     });
 });
 
-// List all videos: GET /api/videos/list
 router.get('/list', async (req, res) => {
   try {
     const filesColl = mongoose.connection.db.collection('videos.files');
@@ -85,12 +72,10 @@ router.get('/list', async (req, res) => {
       contentType: f.contentType
     })));
   } catch (err) {
-    console.error('List error:', err);
     res.status(500).json({ error: 'Failed to list videos' });
   }
 });
 
-// Stream endpoint with Range support: GET /api/videos/:id
 router.get('/:id', async (req, res) => {
   try {
     const id = req.params.id;
@@ -125,14 +110,13 @@ router.get('/:id', async (req, res) => {
       return;
     }
 
-    // No range header — send full file
     res.writeHead(200, {
       'Content-Length': fileSize,
-      'Content-Type': contentType
+      'Content-Type': contentType,
+      'Accept-Ranges': 'bytes'
     });
     bucket.openDownloadStream(fileId).pipe(res).on('error', () => res.sendStatus(500));
   } catch (err) {
-    console.error('Stream error:', err);
     res.status(400).send('Invalid id');
   }
 });
