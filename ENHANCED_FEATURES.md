@@ -84,7 +84,7 @@
 ### Prerequisites
 - Node.js (v14 or higher)
 - MongoDB
-- Google API Key (provided: AIzaSyAFB_MRQKaDhUN1PXYV45dfjqvzLPxVofw)
+- Google API Key
 
 ### Installation
 1. Clone the repository
